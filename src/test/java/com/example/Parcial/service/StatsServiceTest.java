@@ -1,7 +1,7 @@
 package com.example.Parcial.service;
 
-import com.example.Parcial.model.Stats;
-import com.example.Parcial.repository.ADNRepository;
+import com.example.Parcial.dto.StatsResponse;
+import com.example.Parcial.repository.DnaRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -9,50 +9,38 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
-public class StatsServiceTest {
+class StatsServiceTest {
 
     @Mock
-    private ADNRepository adnRepository; // Mock the repository
+    private DnaRecordRepository repository;
 
     @InjectMocks
-    private StatsService statsService; // Inject the mock into the service
+    private StatsService statsService;
 
     @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this); // Initialize mocks
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
-    /*
-    TEST 1: VERIFICAR QUE GETSTATS() FUNCIONA CON HUMANOS Y MUTANTES EN LA BD
-     */
     @Test
-    public void testGetStatsWithHumanAndMutantADN() {
-        long expectedMutants = 40;
-        long expectedHumans = 100;
-        double expectedRatio = 0.4;
-        when(adnRepository.countByEsMutante(true)).thenReturn(expectedMutants);
-        when(adnRepository.countByEsMutante(false)).thenReturn(expectedHumans);
-        Stats result = statsService.getStats();
-        assertEquals(expectedMutants, result.getContadorADNMutante(), "El contador de ADN mutante debería coincidir");
-        assertEquals(expectedHumans, result.getContadorADNHumano(), "El contador de ADN humano debería coincidir");
-        assertEquals(expectedRatio, result.getRatio(), 0.001, "El ratio debería ser correcto");
+    void calculatesRatioWhenHumanCountExists() {
+        when(repository.countByIsMutant(true)).thenReturn(4L);
+        when(repository.countByIsMutant(false)).thenReturn(2L);
+
+        StatsResponse response = statsService.getStats();
+        assertEquals(4L, response.getCount_mutant_dna());
+        assertEquals(2L, response.getCount_human_dna());
+        assertEquals(2.0, response.getRatio());
     }
 
-    /*
-    TEST 2: VERIFICAR QUE GETSTATS() FUNCIONA SIN HUMANOS NI MUTANTES EN LA BD
-     */
     @Test
-    public void testGetStatsWithNoHumans() {
-        long expectedMutants = 10;
-        long expectedHumans = 0;
-        double expectedRatio = 0.0;
-        when(adnRepository.countByEsMutante(true)).thenReturn(expectedMutants);
-        when(adnRepository.countByEsMutante(false)).thenReturn(expectedHumans);
-        Stats result = statsService.getStats();
-        assertEquals(expectedMutants, result.getContadorADNMutante(), "El contador de ADN mutante debería coincidir");
-        assertEquals(expectedHumans, result.getContadorADNHumano(), "El contador de ADN humano debería coincidir");
-        assertEquals(expectedRatio, result.getRatio(), "Ratio debería ser 0 porque no hay humanos");
+    void handlesZeroHumanCount() {
+        when(repository.countByIsMutant(true)).thenReturn(1L);
+        when(repository.countByIsMutant(false)).thenReturn(0L);
+
+        StatsResponse response = statsService.getStats();
+        assertEquals(0.0, response.getRatio());
     }
 }
